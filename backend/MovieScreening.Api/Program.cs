@@ -1,4 +1,7 @@
 using MovieScreening.Api.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
+using MovieScreening.Api.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -17,7 +20,25 @@ builder.Services.AddHttpClient<IMovieCatalog, StreamingAvailabilityClient>(clien
     client.BaseAddress = new Uri("https://api.movieofthenight.com/v4/");
     client.Timeout = TimeSpan.FromSeconds(15);
 });
+builder.Services.AddDbContext<FavoritesDbContext>((services, options) =>
+{
+    var connectionString = services.GetRequiredService<IConfiguration>().GetConnectionString("Favorites");
+    if (string.IsNullOrWhiteSpace(connectionString))
+    {
+        var directory = Path.Combine(services.GetRequiredService<IWebHostEnvironment>().ContentRootPath, "App_Data");
+        Directory.CreateDirectory(directory);
+        connectionString = new SqliteConnectionStringBuilder
+        {
+            DataSource = Path.Combine(directory, "favorites.db")
+        }.ToString();
+    }
+    options.UseSqlite(connectionString);
+});
+builder.Services.AddScoped<FavoriteService>();
+
 var app = builder.Build();
+await using (var scope = app.Services.CreateAsyncScope())
+    await scope.ServiceProvider.GetRequiredService<FavoritesDbContext>().Database.EnsureCreatedAsync();
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

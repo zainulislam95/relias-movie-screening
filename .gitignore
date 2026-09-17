@@ -5,6 +5,9 @@
 **/.angular/
 **/coverage/
 **/TestResults/
+**/test-results/
+**/playwright-report/
+**/out-tsc/
 .vs/
 .vscode/
 .idea/
@@ -18,6 +21,7 @@
 **/*.db
 **/*.db-shm
 **/*.db-wal
+**/*.db-journal
 *.pfx
 *.pem
 *.key
