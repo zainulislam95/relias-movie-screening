@@ -1,241 +1,61 @@
 # Movie Screening
 
-ASP.NET Core and Angular application for discovering movies and saving favorites.
+A full-stack movie discovery application built with ASP.NET Core and Angular.
 
-## Status
+Users can search and filter movies, sort results, browse paginated results, and maintain a persistent favorites collection. Movie data is provided by the Streaming Availability API, while favorites are stored locally in SQLite.
 
-The backend supports movie search and genre discovery through Streaming Availability
-API v4, request validation, and consistent error responses. Automated tests use a
-fake provider; they do not require credentials or consume API quota. Favorites
-are persisted in SQLite. The Angular interface supports discovery, filters, sorting,
-cursor pagination, and a shared favorites collection.
+## Features
 
-## Run the full application
+- Search movies by title
+- Filter by release year and genre
+- Sort by title, year, or rating
+- Paginated movie results
+- Add movies to favorites
+- View and remove favorites
+- Persistent favorites using SQLite
+- Responsive Angular UI
+- Loading, empty, validation, and error states
+- Swagger/OpenAPI documentation
+- Backend unit and integration tests
+- Frontend end-to-end tests with Playwright
 
-Requirements: .NET 10 SDK and Node.js 24.15 or newer in the Node 24 release line
-(with npm). Configure the provider key as described below. Open two terminals
-in the repository folder.
+## Tech stack
 
-Backend (PowerShell):
+### Backend
 
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet run --project backend/MovieScreening.Api --no-launch-profile -- --urls http://localhost:5080
+- .NET 10 / ASP.NET Core Web API
+- EF Core
+- SQLite
+- Typed `HttpClient`
+- Problem Details for API errors
+- Swagger / OpenAPI
+- NUnit
+
+### Frontend
+
+- Angular 22
+- TypeScript
+- Angular Signals
+- Reactive Forms
+- Custom responsive CSS
+- Playwright
+
+## Architecture
+
+The frontend communicates only with the ASP.NET Core backend. The backend is responsible for communicating with the Streaming Availability API, which keeps the provider API key out of browser code.
+
+```text
+Angular
+   |
+   v
+ASP.NET Core API
+   |
+   +--> Streaming Availability API
+   |
+   +--> SQLite (Favorites)
 ```
 
-Frontend:
-
-```sh
-cd frontend
-npm ci
-npm start
-```
-
-Open `http://127.0.0.1:4200`. The Angular development server forwards `/api/**`
-to the backend on port 5080. The browser only talks to the frontend origin, so
-the local demo needs no permissive CORS policy. Provider credentials never belong
-in frontend configuration. Swagger remains at `http://localhost:5080/swagger`.
-
-Search runs on form submission or a sort change rather than on every keystroke.
-Changing filters starts a new page sequence. Previous pages are kept in memory
-for the current search, avoiding repeat provider calls. Favorites are loaded
-independently, and their saved state changes only after a successful server response.
-
-### Frontend architecture and verification
-
-- Angular standalone components keep application setup small. The root component
-  owns the filter form and the Discover/Favorites view selection.
-- `MovieApiService` owns typed HTTP calls. `MovieStore` owns results, request
-  cancellation, pagination, and favorites state using Angular signals.
-- `MovieCardComponent` is a reusable presentation component with explicit inputs
-  and a favorite-toggle output. It does not make HTTP requests.
-- Reactive forms validate search input. Loading, error, empty, and missing-poster
-  states are handled explicitly. A failed favorite operation leaves the UI unchanged.
-- The two views share one screen shell; a router and global state framework are
-  unnecessary for this scope. A larger app with movie detail URLs would add routing.
-- Custom CSS supplies the responsive layout without a UI component library. Fonts
-  have local fallbacks, and the interface respects reduced-motion preferences.
-
-From `frontend`:
-
-```sh
-npm run build
-npx playwright install chromium
-npm test
-```
-
-The browser tests use deterministic mock API responses and never consume the
-provider's quota. They cover filters, cursor handling, page caching, stale request
-cancellation, favorites, failures/retries, validation, and mobile layout. Backend
-tests separately verify the real SQLite persistence and HTTP contracts.
-To use an installed Edge browser instead of downloading Chromium, set
-`PLAYWRIGHT_CHANNEL=msedge` (PowerShell: `$env:PLAYWRIGHT_CHANNEL = "msedge"`).
-
-The production build is written to `frontend/dist/movie-screening-ui/browser`.
-Deployment is not configured: a host would need to serve these static files and
-route `/api` to the backend under the same origin. The current shared favorites
-collection is intended for a local demo, not a public multi-user service.
-
-## Run the backend
-
-Install the .NET 10 SDK, then run from the repository root:
-
-```sh
-dotnet restore backend/MovieScreening.Api
-dotnet build backend/MovieScreening.Api --no-restore
-dotnet test backend/MovieScreening.Api.Tests
-dotnet run --project backend/MovieScreening.Api --no-launch-profile -- --urls http://localhost:5080
-```
-
-Check `http://localhost:5080/health`. With `ASPNETCORE_ENVIRONMENT=Development`,
-interactive Swagger UI is available at `http://localhost:5080/swagger`, and the
-OpenAPI document is available at `/openapi/v1.json`. Both are disabled outside
-Development. In Swagger, expand an endpoint, choose **Try it out**, enter parameters,
-and choose **Execute** to inspect the response. The provider API key remains in
-backend configuration; do not enter it in Swagger.
-
-### Configure movie search
-
-Create a free API key at https://developers.movieofthenight.com/. This integration
-uses that platform's `X-API-Key` authentication, not RapidAPI credentials.
-Store the key locally from the repository root:
-
-```sh
-dotnet user-secrets set "Streaming:ApiKey" "YOUR_API_KEY" --project backend/MovieScreening.Api
-```
-
-User secrets load in Development. In PowerShell, set the environment before starting:
-
-```powershell
-$env:ASPNETCORE_ENVIRONMENT = "Development"
-dotnet run --project backend/MovieScreening.Api --no-launch-profile -- --urls http://localhost:5080
-```
-
-Alternatively, supply `Streaming__ApiKey` as a backend environment variable.
-The default country is Germany (`de`); `Streaming__Country` can override it with a
-supported lowercase country code. Restart after changing configuration.
-
-### Endpoints
-
-| Request | Purpose |
-| --- | --- |
-| `GET /api/movies` | Browse movies available in the configured country |
-| `GET /api/movies?title=Batman&year=2008&genre=action` | Refine the provider's title matches |
-| `GET /api/movies?genre=drama&sortBy=year&direction=desc` | Browse by genre and release date |
-| `GET /api/genres` | Available genre IDs and names |
-| `GET /api/favorites` | Saved movies, newest first |
-| `GET /api/favorites/{movieId}` | Retrieve one saved movie |
-| `PUT /api/favorites/{movieId}` | Save a movie using its numeric provider ID |
-| `DELETE /api/favorites/{movieId}` | Remove a saved movie |
-
-Search accepts `title`, `year` (1888–2100), `genre`, `sortBy` (`title`, `year`,
-`rating`), `direction` (`asc`, `desc`), and `cursor`. The default sort is rating
-descending. Title ordering uses the original title, matching the provider's browse
-ordering; year ordering uses the full release date for browsing and the available
-release year for title matches.
-
-Responses contain `items`, `hasMore`, `nextCursor`, and an optional `notice`.
-For the next page, URL-encode `nextCursor` and repeat the same filters and sorting.
-Discard the cursor when any filter or sort changes. Browsing uses provider pages
-of up to 20 movies; title matches are paginated locally in groups of 10. Title
-search can include movies unavailable in the configured country. Each page request
-currently calls the provider, so avoid automatic repeated searches on every keystroke.
-
-Errors use Problem Details JSON: 400 for invalid input, 503 for missing configuration
-or provider quota exhaustion, 502 for other provider failures, and 504 for timeouts.
-The API uses a 15-second timeout and passes request cancellation through to the
-provider. It does not automatically retry requests, to avoid consuming extra quota.
-
-### Favorites
-
-Use the `id` returned by movie search (not `imdbId` or `tmdbId`). PUT returns 201
-
-## Tests
-
-This repository contains unit and integration tests for backend and frontend.
-
-- Unit tests: fast, isolated tests that mock dependencies. They live under
-  `backend/MovieScreening.Api.Tests` in the folders Controllers, Services,
-  and Repositories and are annotated with `[Category("Unit")]` for filtering.
-- Integration tests: exercise the running application (routing, validation,
-  persistence). They live in `backend/MovieScreening.Api.Tests/Integration` and
-  are annotated with `[Category("Integration")]`.
-
-Run backend unit tests only:
-
-```sh
-dotnet test backend/MovieScreening.Api.Tests --filter Category=Unit
-```
-
-Run integration tests only:
-
-```sh
-dotnet test backend/MovieScreening.Api.Tests --filter Category=Integration
-```
-
-Run all backend tests:
-
-```sh
-dotnet test backend/MovieScreening.Api.Tests
-```
-
-Run a single test (example by fully-qualified name):
-
-```sh
-dotnet test --filter FullyQualifiedName~MovieScreening.Api.Tests.Controllers.FavoritesControllerTests.Get_returns_favorites_from_service
-```
-
-Frontend tests (Playwright):
-
-```sh
-cd frontend
-npm ci
-npm test
-```
-
-Notes and CI suggestions
-- Integration tests create a temporary SQLite file (or use in-memory shared
-  SQLite) so expect test artifacts in the system temp directory; tests clean up
-  after themselves but CI should run in an isolated workspace.
-- Use the `Category` filter in CI to split fast unit tests from slower
-  integration tests (run unit tests on every push, run integration tests in a
-  separate pipeline stage or nightly job).
-- Cache NuGet and npm dependencies in CI to speed runs.
-
-with a Location header for a new favorite, or 204 if already saved. DELETE returns
-204 without a response body, including repeated requests. An unknown movie
-returns 404 when adding. Invalid IDs return 400. Saving a new favorite needs provider
-access; listing, deleting, or adding an already-saved favorite does not.
-
-The default database is `backend/MovieScreening.Api/App_Data/favorites.db`, anchored
-to the API content root rather than the terminal's working directory. It is created
-on startup and ignored by Git. `ConnectionStrings__Favorites` can override the
-SQLite connection string; for a custom file location, create its parent directory first.
-
-The demo has one shared favorites collection, without accounts. Each row stores
-the provider ID, a JSON snapshot of the movie details, and the time it was added.
-This keeps saved movies readable during provider outages; details are not refreshed
-automatically. JSON suits the current requirement because we display complete saved
-movies without querying individual metadata fields.
-
-Controllers depend on service interfaces (`IFavoriteService`, `IMovieService`).
-`FavoriteService` coordinates movie lookup and duplicate handling through
-`IMovieService` and `IFavoriteRepository`. It contains no EF Core calls or SQL.
-`FavoriteRepository` owns database initialization, queries, snapshot serialization,
-and writes through `FavoritesDbContext`. Its primary key and parameterized
-`ON CONFLICT DO NOTHING` insert make simultaneous additions safe.
-PUT expresses the idempotent operation of making a known movie a favorite.
-
-`MovieService` delegates provider access to `IMovieCatalog`, implemented by the
-typed `StreamingAvailabilityClient`. Movie search does not use a database, so it
-has no database repository. This service is currently thin; it provides a stable
-application boundary for controllers and future movie-related business rules.
-
-Dependencies are registered in `Program.cs` and passed through constructors.
-Services, the favorites repository, and the database context are scoped per request.
-The typed HTTP client manages provider connections. Unit tests replace the service
-and repository interfaces with fakes; HTTP integration tests exercise the complete
-chain against real SQLite databases.
+Backend responsibilities are separated into controllers, services, provider clients, and persistence.
 
 ```text
 Controllers
@@ -244,45 +64,286 @@ Controllers
 
 Services
   FavoriteService -> IFavoriteRepository + IMovieService
-  MovieService -> IMovieCatalog (external API client)
+  MovieService -> IMovieCatalog
 
-Repositories
+Persistence
   FavoriteRepository -> FavoritesDbContext -> SQLite
+
+External integration
+  StreamingAvailabilityClient -> Streaming Availability API
 ```
 
-Startup uses `EnsureCreated` for this initial, single-table database. It does not
-upgrade an existing schema. Introduce EF migrations before evolving the schema
-with retained user data; this is not a production migration strategy.
+`MovieService` intentionally remains a small application boundary between controllers and the external catalog client. `FavoriteService` contains the favorites workflow and coordinates provider lookup with persistence.
 
-To verify in Swagger: save a search result, list favorites, restart the server and
-list again, then delete the movie. The tests also perform these checks against
-isolated SQLite files and exercise simultaneous duplicate additions.
+## Requirements
+
+- .NET 10 SDK
+- Node.js supported by Angular 22:
+  - Node 22.22.3+
+  - Node 24.15.0+
+  - Node 26.0.0+
+- npm
+- A free Streaming Availability API key
+
+Create an API key at:
+
+https://developers.movieofthenight.com/
+
+## Quick start
+
+### 1. Configure the API key
+
+From the repository root:
+
+```sh
+dotnet user-secrets set "Streaming:ApiKey" "YOUR_API_KEY" --project backend/MovieScreening.Api
+```
+
+Alternatively, provide the key through the `Streaming__ApiKey` environment variable.
+
+The default country is Germany (`de`). It can be overridden with:
+
+```text
+Streaming__Country
+```
+
+### 2. Start the backend
+
+PowerShell:
+
+```powershell
+$env:ASPNETCORE_ENVIRONMENT = "Development"
+dotnet run --project backend/MovieScreening.Api --no-launch-profile -- --urls http://localhost:5080
+```
+
+The backend will be available at:
+
+- API: `http://localhost:5080`
+- Health check: `http://localhost:5080/health`
+- Swagger: `http://localhost:5080/swagger`
+
+Swagger is enabled only in the Development environment.
+
+### 3. Start the frontend
+
+In a second terminal:
+
+```sh
+cd frontend
+npm ci
+npm start
+```
+
+Open:
+
+```text
+http://127.0.0.1:4200
+```
+
+The Angular development server proxies `/api/**` requests to the backend on port `5080`, so the provider credentials never need to be exposed to the frontend.
+
+## API
+
+| Request | Purpose |
+| --- | --- |
+| `GET /api/movies` | Browse/search movies |
+| `GET /api/genres` | Retrieve available genres |
+| `GET /api/favorites` | Retrieve saved favorites |
+| `GET /api/favorites/{movieId}` | Retrieve one favorite |
+| `PUT /api/favorites/{movieId}` | Add a movie to favorites |
+| `DELETE /api/favorites/{movieId}` | Remove a movie from favorites |
+
+### Movie search
+
+`GET /api/movies` accepts:
+
+- `title`
+- `year` (`1888`–`2100`)
+- `genre`
+- `sortBy` (`title`, `year`, `rating`)
+- `direction` (`asc`, `desc`)
+- `cursor`
+
+The default ordering is rating descending.
+
+Filtered browsing uses the provider's cursor-based pagination. Responses contain:
+
+```text
+items
+hasMore
+nextCursor
+notice
+```
+
+When requesting the next page, the same filters and sorting should be used together with the returned cursor. If a filter or sort option changes, the cursor should be discarded.
+
+Title search is handled differently because the provider returns a limited title-match result set. Matching results are filtered and sorted by the backend and paginated locally.
+
+The frontend keeps previous pages for the current search in memory so navigating back does not require another provider call.
+
+## Favorites
+
+Favorites are persisted in SQLite.
+
+The default database location is:
+
+```text
+backend/MovieScreening.Api/App_Data/favorites.db
+```
+
+The file is created automatically on startup and is ignored by Git.
+
+A custom SQLite connection string can be provided using:
+
+```text
+ConnectionStrings__Favorites
+```
+
+Favorites use the numeric provider movie ID.
+
+`PUT /api/favorites/{movieId}` is idempotent:
+
+- `201 Created` when a movie is saved for the first time
+- `204 No Content` when the movie is already saved
+- `404 Not Found` when the provider movie does not exist
+- `400 Bad Request` for an invalid ID
+
+`DELETE /api/favorites/{movieId}` returns `204 No Content`, including repeated delete requests.
+
+Each favorite stores:
+
+- provider movie ID
+- a JSON snapshot of the movie
+- the time it was added
+
+Keeping a snapshot allows previously saved favorites to remain readable if the external provider is temporarily unavailable.
+
+The demo intentionally uses one shared favorites collection and does not implement user accounts.
+
+## Error handling and external API behavior
+
+API errors use RFC-style Problem Details responses and include a trace ID for diagnostics.
+
+Typical responses include:
+
+- `400` for invalid input
+- `404` when a requested movie is not found
+- `502` for provider failures
+- `503` for unavailable provider configuration or quota-related failures
+- `504` for provider timeouts
+- `500` for unexpected application errors
+
+The Streaming Availability API client has a 15-second timeout and propagates request cancellation.
+
+Automatic retries are intentionally not enabled because the external API is quota-limited. A user can retry a failed operation explicitly rather than having the application multiply provider requests automatically.
+
+## Frontend design
+
+The Angular application uses standalone components and keeps application state intentionally lightweight.
+
+- `MovieApiService` owns typed HTTP communication.
+- `MovieStore` manages search results, pagination, cancellation, and favorites state using Angular signals.
+- `MovieCardComponent` is a reusable presentation component and does not perform HTTP requests directly.
+- Reactive Forms provide search validation.
+- Stale search requests are cancelled when a newer search starts.
+- Failed favorite operations do not optimistically leave the UI in an incorrect state.
+- Loading, empty, failure, and missing-poster states are handled explicitly.
+- Custom CSS provides responsive layouts without introducing a UI component library.
+
+A router or larger global state framework was not added because the assignment contains only two lightweight views. Those would become reasonable additions if the application grew to include detail pages or more independent workflows.
+
+## Tests
+
+### Backend
+
+Run all backend tests:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests
+```
+
+Run only unit tests:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests --filter Category=Unit
+```
+
+Run only integration tests:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests --filter Category=Integration
+```
+
+Backend tests cover controller behavior, services, repositories, HTTP contracts, SQLite persistence, and duplicate favorite handling.
+
+Tests use isolated data and do not require Streaming Availability API credentials or consume provider quota.
+
+### Frontend
+
+From `frontend`:
+
+```sh
+npm ci
+npx playwright install chromium
+npm test
+```
+
+Playwright tests use deterministic mock API responses and cover search filters, pagination behavior, page caching, stale request cancellation, favorites, validation, failures/retries, and responsive layout.
+
+Build the frontend with:
+
+```sh
+npm run build
+```
+
+The production output is written to:
+
+```text
+frontend/dist/movie-screening-ui/browser
+```
 
 ## Design decisions
 
-- One repository keeps backend and frontend changes together for review.
-- .NET 10 matches the installed SDK. One API project keeps the assignment small;
-  controllers, services, and repositories have separate responsibilities and depend
-  on interfaces at their boundaries.
-- A typed HTTP client isolates Streaming Availability API details. Angular will
-  call our backend so the provider key stays on the server.
-- SQLite with EF Core persists favorites without requiring a database server.
-- The provider uses cursor pagination for filtered browsing. Title search instead
-  returns a limited set of matches without pagination. Those matches are
-  filtered by year and genre, sorted, and paginated locally. This does not represent
-  an exhaustive search of the entire provider catalog.
+### Backend proxy for the external API
 
-## Configuration and repository hygiene
+The Angular client does not call the Streaming Availability API directly. The backend owns that integration so API credentials remain server-side and the frontend is not coupled directly to the provider contract.
 
-Use .NET user secrets or `Streaming__ApiKey` for the API key.
-Never put credentials in source-controlled settings or Angular code.
-Build output, local databases, editor settings, and local secret files are ignored.
+### SQLite for favorites
 
-## Review increments
+SQLite provides real persistence without requiring reviewers to install or configure a separate database server. It is appropriate for the scope of this local coding assignment.
 
-1. Backend foundation and repository configuration — complete.
-2. Movie search integration, request validation, error handling, and contract tests — implemented.
-3. Persistent, idempotent favorites and database integration tests — implemented.
-4. Angular search and favorites interface, including loading, empty, and error states — implemented.
+### Idempotent favorites API
 
-Provider documentation: https://docs.movieofthenight.com/
+`PUT /api/favorites/{movieId}` represents the desired state that a known movie should be a favorite. Repeating the same request therefore has the same final result.
+
+The SQLite primary key and `ON CONFLICT DO NOTHING` also make simultaneous duplicate additions safe.
+
+### Simple application structure
+
+The solution deliberately avoids CQRS, MediatR, microservices, and other infrastructure that would add complexity without providing value for this scope.
+
+The architecture keeps responsibilities separate while remaining small enough to understand quickly.
+
+### No automatic external API retries
+
+Provider requests are not automatically retried because the external API has a usage quota. This avoids turning one failed user action into several provider calls.
+
+## Trade-offs and possible improvements
+
+For a production system, possible next steps would include:
+
+- user authentication and per-user favorites
+- EF Core migrations instead of `EnsureCreated`
+- caching relatively static provider data such as genres
+- production monitoring and distributed tracing
+- deployment configuration
+- a refresh strategy for saved movie snapshots
+- routing and dedicated movie-detail pages if the frontend grows
+
+The current implementation intentionally prioritizes a simple, reliable solution for the requested assignment rather than adding production infrastructure that the scope does not require.
+
+## Repository hygiene
+
+Provider credentials must be stored in .NET user secrets or environment variables.
+
+Secrets, local databases, build output, editor settings, and local configuration files are excluded from source control.
