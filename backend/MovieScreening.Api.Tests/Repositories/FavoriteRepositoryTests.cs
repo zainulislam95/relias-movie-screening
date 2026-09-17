@@ -12,6 +12,7 @@ using NUnit.Framework;
 
 namespace MovieScreening.Api.Tests;
 
+[Category("Unit")]
 public sealed class FavoriteRepositoryTests
 {
     private static Movie Sample => new("123", "A Movie", "A Movie", 2020, "Plot", 85, null, new[] { new Genre("drama", "Drama") });

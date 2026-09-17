@@ -8,6 +8,7 @@ using NUnit.Framework;
 
 namespace MovieScreening.Api.Tests;
 
+[Category("Unit")]
 public sealed class MovieServiceTests
 {
     [Test]

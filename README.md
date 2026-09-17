@@ -149,6 +149,59 @@ provider. It does not automatically retry requests, to avoid consuming extra quo
 ### Favorites
 
 Use the `id` returned by movie search (not `imdbId` or `tmdbId`). PUT returns 201
+
+## Tests
+
+This repository contains unit and integration tests for backend and frontend.
+
+- Unit tests: fast, isolated tests that mock dependencies. They live under
+  `backend/MovieScreening.Api.Tests` in the folders Controllers, Services,
+  and Repositories and are annotated with `[Category("Unit")]` for filtering.
+- Integration tests: exercise the running application (routing, validation,
+  persistence). They live in `backend/MovieScreening.Api.Tests/Integration` and
+  are annotated with `[Category("Integration")]`.
+
+Run backend unit tests only:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests --filter Category=Unit
+```
+
+Run integration tests only:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests --filter Category=Integration
+```
+
+Run all backend tests:
+
+```sh
+dotnet test backend/MovieScreening.Api.Tests
+```
+
+Run a single test (example by fully-qualified name):
+
+```sh
+dotnet test --filter FullyQualifiedName~MovieScreening.Api.Tests.Controllers.FavoritesControllerTests.Get_returns_favorites_from_service
+```
+
+Frontend tests (Playwright):
+
+```sh
+cd frontend
+npm ci
+npm test
+```
+
+Notes and CI suggestions
+- Integration tests create a temporary SQLite file (or use in-memory shared
+  SQLite) so expect test artifacts in the system temp directory; tests clean up
+  after themselves but CI should run in an isolated workspace.
+- Use the `Category` filter in CI to split fast unit tests from slower
+  integration tests (run unit tests on every push, run integration tests in a
+  separate pipeline stage or nightly job).
+- Cache NuGet and npm dependencies in CI to speed runs.
+
 with a Location header for a new favorite, or 204 if already saved. DELETE returns
 204 without a response body, including repeated requests. An unknown movie
 returns 404 when adding. Invalid IDs return 400. Saving a new favorite needs provider
