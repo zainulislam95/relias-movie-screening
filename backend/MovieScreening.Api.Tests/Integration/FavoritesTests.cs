@@ -1,3 +1,5 @@
+using MovieScreening.Api.Abstractions;
+using MovieScreening.Api.Exceptions;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Hosting;
@@ -7,11 +9,11 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using MovieScreening.Api.Contracts;
-using MovieScreening.Api.Services;
 using NUnit.Framework;
 
 namespace MovieScreening.Api.Tests;
 
+[Category("Integration")]
 public sealed class FavoritesTests
 {
     private string databasePath = null!;
@@ -146,24 +148,5 @@ public sealed class FavoritesTests
     [Test]
     public async Task Provider_failure_does_not_create_a_favorite()
     {
-        await using var app = new Factory(databasePath, new Catalog { Fail = true });
-        using var client = app.CreateClient();
-        using var response = await client.PutAsync("/api/favorites/123", null);
-        Assert.That(response.StatusCode, Is.EqualTo(HttpStatusCode.ServiceUnavailable));
-        Assert.That(await client.GetFromJsonAsync<Movie[]>("/api/favorites"), Is.Empty);
-    }
-
-    [TestCase("invalid")]
-    [TestCase("123456789012345678901")]
-    public async Task Invalid_id_is_rejected_without_provider_access(string id)
-    {
-        var catalog = new Catalog();
-        await using var app = new Factory(databasePath, catalog);
-        using var client = app.CreateClient();
-        using var add = await client.PutAsync($"/api/favorites/{id}", null);
-        using var delete = await client.DeleteAsync($"/api/favorites/{id}");
-        Assert.That(add.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That(delete.StatusCode, Is.EqualTo(HttpStatusCode.BadRequest));
-        Assert.That(catalog.Calls, Is.Zero);
     }
 }

@@ -1,7 +1,8 @@
+using MovieScreening.Api.Exceptions;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.ErrorHandling;
 
 public sealed class ApiExceptionHandler(IProblemDetailsService problems, ILogger<ApiExceptionHandler> logger) : IExceptionHandler
 {

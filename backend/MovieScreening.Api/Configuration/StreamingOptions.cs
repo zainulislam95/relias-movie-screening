@@ -1,4 +1,4 @@
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.Configuration;
 
 public sealed class StreamingOptions
 {

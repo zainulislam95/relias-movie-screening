@@ -165,9 +165,37 @@ This keeps saved movies readable during provider outages; details are not refres
 automatically. JSON suits the current requirement because we display complete saved
 movies without querying individual metadata fields.
 
-The service uses EF Core directly, with no generic repository wrapper. A primary
-key and a parameterized `ON CONFLICT DO NOTHING` insert make simultaneous additions
-safe. PUT expresses the idempotent operation of making a known movie a favorite.
+Controllers depend on service interfaces (`IFavoriteService`, `IMovieService`).
+`FavoriteService` coordinates movie lookup and duplicate handling through
+`IMovieService` and `IFavoriteRepository`. It contains no EF Core calls or SQL.
+`FavoriteRepository` owns database initialization, queries, snapshot serialization,
+and writes through `FavoritesDbContext`. Its primary key and parameterized
+`ON CONFLICT DO NOTHING` insert make simultaneous additions safe.
+PUT expresses the idempotent operation of making a known movie a favorite.
+
+`MovieService` delegates provider access to `IMovieCatalog`, implemented by the
+typed `StreamingAvailabilityClient`. Movie search does not use a database, so it
+has no database repository. This service is currently thin; it provides a stable
+application boundary for controllers and future movie-related business rules.
+
+Dependencies are registered in `Program.cs` and passed through constructors.
+Services, the favorites repository, and the database context are scoped per request.
+The typed HTTP client manages provider connections. Unit tests replace the service
+and repository interfaces with fakes; HTTP integration tests exercise the complete
+chain against real SQLite databases.
+
+```text
+Controllers
+  FavoritesController -> IFavoriteService
+  MoviesController / GenresController -> IMovieService
+
+Services
+  FavoriteService -> IFavoriteRepository + IMovieService
+  MovieService -> IMovieCatalog (external API client)
+
+Repositories
+  FavoriteRepository -> FavoritesDbContext -> SQLite
+```
 
 Startup uses `EnsureCreated` for this initial, single-table database. It does not
 upgrade an existing schema. Introduce EF migrations before evolving the schema
@@ -181,7 +209,8 @@ isolated SQLite files and exercise simultaneous duplicate additions.
 
 - One repository keeps backend and frontend changes together for review.
 - .NET 10 matches the installed SDK. One API project keeps the assignment small;
-  contracts and services separate responsibilities without extra architectural layers.
+  controllers, services, and repositories have separate responsibilities and depend
+  on interfaces at their boundaries.
 - A typed HTTP client isolates Streaming Availability API details. Angular will
   call our backend so the provider key stays on the server.
 - SQLite with EF Core persists favorites without requiring a database server.

@@ -1,4 +1,4 @@
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.Exceptions;
 
 public sealed class CatalogException(int statusCode, string message) : Exception(message)
 {

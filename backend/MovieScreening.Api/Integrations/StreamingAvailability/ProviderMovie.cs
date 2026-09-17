@@ -1,6 +1,6 @@
 using MovieScreening.Api.Contracts;
 
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.Integrations.StreamingAvailability;
 
 internal sealed record ProviderPage(ProviderMovie[] Shows, bool HasMore, string? NextCursor);
 

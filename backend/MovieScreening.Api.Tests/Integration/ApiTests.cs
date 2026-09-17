@@ -9,6 +9,7 @@ using Microsoft.Data.Sqlite;
 
 namespace MovieScreening.Api.Tests;
 
+[Category("Integration")]
 public sealed class ApiTests
 {
     private sealed class Factory : WebApplicationFactory<Program>

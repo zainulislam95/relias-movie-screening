@@ -1,10 +1,13 @@
+using MovieScreening.Api.Configuration;
+using MovieScreening.Api.Abstractions;
+using MovieScreening.Api.Exceptions;
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using MovieScreening.Api.Contracts;
 
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.Integrations.StreamingAvailability;
 
 public sealed class StreamingAvailabilityClient(HttpClient http, IOptions<StreamingOptions> options) : IMovieCatalog
 {

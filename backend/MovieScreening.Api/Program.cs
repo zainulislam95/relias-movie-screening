@@ -1,4 +1,9 @@
+using MovieScreening.Api.Configuration;
+using MovieScreening.Api.Integrations.StreamingAvailability;
+using MovieScreening.Api.Abstractions;
+using MovieScreening.Api.ErrorHandling;
 using MovieScreening.Api.Services;
+using MovieScreening.Api.Repositories;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using MovieScreening.Api.Data;
@@ -34,11 +39,13 @@ builder.Services.AddDbContext<FavoritesDbContext>((services, options) =>
     }
     options.UseSqlite(connectionString);
 });
-builder.Services.AddScoped<FavoriteService>();
+builder.Services.AddScoped<IMovieService, MovieService>();
+builder.Services.AddScoped<IFavoriteRepository, FavoriteRepository>();
+builder.Services.AddScoped<IFavoriteService, FavoriteService>();
 
 var app = builder.Build();
 await using (var scope = app.Services.CreateAsyncScope())
-    await scope.ServiceProvider.GetRequiredService<FavoritesDbContext>().Database.EnsureCreatedAsync();
+    await scope.ServiceProvider.GetRequiredService<IFavoriteRepository>().InitializeAsync(CancellationToken.None);
 
 app.UseExceptionHandler();
 app.UseStatusCodePages();

@@ -1,6 +1,6 @@
 using MovieScreening.Api.Contracts;
 
-namespace MovieScreening.Api.Services;
+namespace MovieScreening.Api.Abstractions;
 
 public interface IMovieCatalog
 {

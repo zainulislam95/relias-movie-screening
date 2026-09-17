@@ -1,14 +1,19 @@
+using Moq;
+using Moq.Protected;
+using MovieScreening.Api.Configuration;
+using MovieScreening.Api.Integrations.StreamingAvailability;
+using MovieScreening.Api.Exceptions;
 using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using MovieScreening.Api.Contracts;
-using MovieScreening.Api.Services;
 using NUnit.Framework;
 
 namespace MovieScreening.Api.Tests;
 
+[Category("Unit")]
 public sealed class CatalogTests
 {
     private sealed class StubHandler(Func<HttpRequestMessage, CancellationToken, Task<HttpResponseMessage>> send) : HttpMessageHandler
@@ -46,7 +51,11 @@ public sealed class CatalogTests
         });
         var result = await Client(handler).SearchAsync(new MovieSearch
         {
-            Year = 2020, Genre = "drama", SortBy = "year", Direction = "asc", Cursor = "next?x=1&b=two+three"
+            Year = 2020,
+            Genre = "drama",
+            SortBy = "year",
+            Direction = "asc",
+            Cursor = "next?x=1&b=two+three"
         }, default);
         Assert.That(result.NextCursor, Is.EqualTo("opaque+next"));
     }
@@ -56,8 +65,13 @@ public sealed class CatalogTests
     {
         var shows = Enumerable.Range(1, 15).Select(i => new
         {
-            id = i.ToString(), showType = "movie", title = $"Film {i}", originalTitle = $"Film {i}",
-            releaseYear = i <= 12 ? 2020 : 2019, overview = "Plot", rating = i,
+            id = i.ToString(),
+            showType = "movie",
+            title = $"Film {i}",
+            originalTitle = $"Film {i}",
+            releaseYear = i <= 12 ? 2020 : 2019,
+            overview = "Plot",
+            rating = i,
             genres = new[] { new { id = "drama", name = "Drama" } },
             imageSet = new { verticalPoster = new { w360 = "https://example.com/poster.jpg" } }
         });

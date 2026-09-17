@@ -1,13 +1,13 @@
+using MovieScreening.Api.Abstractions;
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using MovieScreening.Api.Contracts;
-using MovieScreening.Api.Services;
 
 namespace MovieScreening.Api.Controllers;
 
 [ApiController]
 [Route("api/favorites")]
-public sealed class FavoritesController(FavoriteService favorites) : ControllerBase
+public sealed class FavoritesController(IFavoriteService favorites) : ControllerBase
 {
     [HttpGet]
     public Task<Movie[]> Get(CancellationToken cancellationToken) => favorites.GetAsync(cancellationToken);
