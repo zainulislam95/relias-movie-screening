@@ -190,16 +190,24 @@ test("failed favorite changes keep the existing state and allow retry", async ({
 test("shows loading, error, retry, and empty results", async ({ page }) => {
   await mockApi(page);
   let fail = true;
+  let releaseResponse!: () => void;
+  const responseReady = new Promise<void>((resolve) => {
+    releaseResponse = resolve;
+  });
   await page.route("**/api/movies?*", async (route) => {
-    await new Promise((resolve) => setTimeout(resolve, 250));
+    await responseReady;
     await route.fulfill(
       fail
         ? { status: 503, json: { title: "Unavailable" } }
         : { json: { ...result, items: [], hasMore: false, nextCursor: null } },
     );
   });
-  await page.goto("/");
-  await expect(page.getByText("Finding your next great watch…")).toBeVisible();
+  await page.goto("/", { waitUntil: "domcontentloaded" });
+  try {
+    await expect(page.getByText("Finding your next great watch…")).toBeVisible();
+  } finally {
+    releaseResponse();
+  }
   await expect(
     page.getByRole("heading", { name: "A brief intermission" }),
   ).toBeVisible();
