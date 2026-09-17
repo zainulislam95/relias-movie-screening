@@ -1,0 +1,289 @@
+<a class="skip-link" href="#main-content">Skip to content</a>
+<header class="site-header">
+  <a class="brand" href="/" aria-label="Movie Screening home"
+    ><span class="brand-mark" aria-hidden="true">▶</span
+    ><span
+      >movie<span class="brand-light">screening</span
+      ><small>THE NEXT GREAT WATCH.</small></span
+    ></a
+  >
+  <nav aria-label="Main navigation">
+    <button
+      [class.active]="view() === 'discover'"
+      [attr.aria-current]="view() === 'discover' ? 'page' : null"
+      (click)="view.set('discover')"
+    >
+      Discover
+    </button>
+    <button
+      [class.active]="view() === 'favorites'"
+      [attr.aria-current]="view() === 'favorites' ? 'page' : null"
+      (click)="view.set('favorites')"
+    >
+      Favorites <span class="nav-count">{{ store.favorites().length }}</span>
+    </button>
+  </nav>
+</header>
+<main id="main-content">
+  @if (view() === "discover") {
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow">
+          <span></span> A LITTLE LESS SCROLLING. A BETTER MOVIE.
+        </p>
+        <h1 id="hero-title">Make tonight<br /><em>a movie night.</em></h1>
+        <p class="hero-description">
+          Find something worth watching.<br />Explore movies, narrow it down,
+          and save your favorites.
+        </p>
+        <a class="hero-link" href="#search-form"
+          >Find your next watch <span aria-hidden="true">↘</span></a
+        >
+      </div>
+      <div class="cinema-art" aria-hidden="true">
+        <div class="orbit orbit-one"></div>
+        <div class="orbit orbit-two"></div>
+        <div class="ticket">
+          <span>ADMIT ONE</span
+          ><strong>GOOD<br />STORIES.<br />GREAT<br />NIGHTS.</strong>
+          <div class="ticket-bottom">
+            <span>MOVIE SCREENING</span><span>01 / ∞</span>
+          </div>
+        </div>
+        <div class="art-caption">YOUR NEXT FAVORITE IS OUT THERE.</div>
+      </div>
+    </section>
+    <section class="discovery" aria-labelledby="results-title">
+      <form
+        id="search-form"
+        class="search-panel"
+        [formGroup]="form"
+        (ngSubmit)="search()"
+      >
+        <div class="field title-field">
+          <label for="title">Movie title</label
+          ><input
+            id="title"
+            type="search"
+            formControlName="title"
+            placeholder="What are you in the mood for?"
+            maxlength="200"
+          />
+        </div>
+        <div class="field">
+          <label for="year">Release year</label
+          ><input
+            id="year"
+            type="number"
+            formControlName="year"
+            placeholder="Any year"
+            min="1888"
+            max="2100"
+            step="1"
+            [attr.aria-invalid]="
+              form.controls.year.invalid && form.controls.year.touched
+            "
+            aria-describedby="year-error"
+          />
+        </div>
+        <div class="field">
+          <label for="genre">Genre</label
+          ><select id="genre" formControlName="genre">
+            <option value="">All genres</option>
+            @for (genre of store.genres(); track genre.id) {
+              <option [value]="genre.id">{{ genre.name }}</option>
+            }
+          </select>
+        </div>
+        <button class="primary-button search-submit" type="submit">
+          Search movies <span aria-hidden="true">→</span>
+        </button>
+        @if (form.controls.year.invalid && form.controls.year.touched) {
+          <p id="year-error" class="field-error" role="alert">
+            Enter a whole year between 1888 and 2100.
+          </p>
+        }
+      </form>
+      @if (store.genreError()) {
+        <div class="inline-notice" role="status">
+          {{ store.genreError() }}
+          <button
+            class="text-button"
+            (click)="store.loadGenres()"
+            [disabled]="store.genresLoading()"
+          >
+            Retry genres
+          </button>
+        </div>
+      }
+      <div class="results-toolbar">
+        <div>
+          <p class="eyebrow">THE MOVIE COLLECTION</p>
+          <h2 id="results-title">
+            Find your next favorite<span class="accent-dot">.</span>
+          </h2>
+        </div>
+        <div class="sort-controls">
+          <button class="text-button" (click)="reset()">Reset filters</button
+          ><label for="sort">Sort by</label
+          ><select
+            id="sort"
+            [formControl]="form.controls.sort"
+            (change)="search()"
+          >
+            <option value="rating:desc">Highest rated</option>
+            <option value="year:desc">Newest first</option>
+            <option value="year:asc">Oldest first</option>
+            <option value="title:asc">Original title A–Z</option>
+            <option value="title:desc">Original title Z–A</option>
+          </select>
+        </div>
+      </div>
+      @if (store.favoritesError()) {
+        <div class="inline-notice" role="alert">
+          {{ store.favoritesError() }}
+          <button class="text-button" (click)="store.loadFavorites()">
+            Retry favorites
+          </button>
+        </div>
+      }
+      @if (store.actionError()) {
+        <div class="error-banner" role="alert">
+          {{ store.actionError() }} Your favorites have not changed.
+        </div>
+      }
+      <div [attr.aria-busy]="store.loading()">
+        @if (store.loading()) {
+          <p class="loading-label" role="status">
+            Finding your next great watch…
+          </p>
+          <div class="movie-grid" aria-hidden="true">
+            @for (item of [1, 2, 3, 4]; track item) {
+              <div class="skeleton-card">
+                <div></div>
+                <span></span><span></span>
+              </div>
+            }
+          </div>
+        } @else if (store.searchError()) {
+          <div class="empty-state" role="alert">
+            <span class="state-symbol" aria-hidden="true">!</span>
+            <h3>A brief intermission</h3>
+            <p>{{ store.searchError() }}</p>
+            <button class="primary-button" (click)="store.retry()">
+              Try again
+            </button>
+          </div>
+        } @else {
+          @if (store.notice()) {
+            <p class="result-notice">{{ store.notice() }}</p>
+          }
+          @if (store.movies().length) {
+            <div class="movie-grid">
+              @for (movie of store.movies(); track movie.id) {
+                <app-movie-card
+                  [movie]="movie"
+                  [saved]="store.favoriteIds().has(movie.id)"
+                  [busy]="store.pending().has(movie.id)"
+                  [disabled]="
+                    !store.favoritesReady() || store.favoritesLoading()
+                  "
+                  (favoriteToggle)="store.toggleFavorite(movie)"
+                />
+              }
+            </div>
+          } @else {
+            <div class="empty-state">
+              <span class="state-symbol" aria-hidden="true">⌕</span>
+              <h3>No matches this time.</h3>
+              <p>Try another title or give your search a little more room.</p>
+              <button class="primary-button" (click)="reset()">
+                Clear filters
+              </button>
+            </div>
+          }
+          <div class="pagination" aria-label="Movie pages">
+            <p>{{ store.movies().length }} movies on this page</p>
+            <div>
+              <button
+                class="secondary-button"
+                [disabled]="store.pageIndex() === 0"
+                (click)="store.previous()"
+              >
+                ← Previous</button
+              ><span aria-live="polite">Page {{ store.pageIndex() + 1 }}</span
+              ><button
+                class="secondary-button"
+                [disabled]="!store.hasMore()"
+                (click)="store.next()"
+              >
+                Next →
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+  } @else {
+    <section class="favorites-section" aria-labelledby="favorites-title">
+      <p class="eyebrow">YOUR PERSONAL SHORTLIST</p>
+      <h1 id="favorites-title">Saved for <em>later.</em></h1>
+      <p class="section-description">
+        The movies you don't want to forget. Pick one and make a night of it.
+      </p>
+      @if (store.actionError()) {
+        <div class="error-banner" role="alert">
+          {{ store.actionError() }} Your favorites have not changed.
+        </div>
+      }
+      @if (store.favoritesLoading()) {
+        <p class="loading-label" role="status">Loading your favorites…</p>
+      } @else if (store.favoritesError()) {
+        <div class="empty-state" role="alert">
+          <h3>Your list needs a moment.</h3>
+          <p>{{ store.favoritesError() }}</p>
+          <button class="primary-button" (click)="store.loadFavorites()">
+            Retry favorites
+          </button>
+        </div>
+      } @else if (!store.favorites().length) {
+        <div class="empty-state">
+          <span class="state-symbol" aria-hidden="true">♡</span>
+          <h3>Your next movie night starts here.</h3>
+          <p>Save a movie while exploring and it will be waiting here.</p>
+          <button class="primary-button" (click)="view.set('discover')">
+            Discover movies →
+          </button>
+        </div>
+      } @else {
+        <div class="saved-heading">
+          <h2>{{ store.favorites().length }} saved movies</h2>
+          <span>Ready when you are</span>
+        </div>
+        <div class="movie-grid">
+          @for (movie of store.favorites(); track movie.id) {
+            <app-movie-card
+              [movie]="movie"
+              [saved]="true"
+              [busy]="store.pending().has(movie.id)"
+              (favoriteToggle)="store.toggleFavorite(movie)"
+            />
+          }
+        </div>
+      }
+    </section>
+  }
+  <p class="sr-only" role="status">{{ store.announcement() }}</p>
+</main>
+<footer>
+  <span class="footer-brand">movie<span>screening</span></span>
+  <p>
+    Movie and streaming data provided by
+    <a
+      href="https://www.movieofthenight.com/about/api"
+      target="_blank"
+      rel="noopener noreferrer"
+      >Streaming Availability API by Movie of the Night ↗</a
+    >
+  </p>
+</footer>
